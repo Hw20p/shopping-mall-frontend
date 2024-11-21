@@ -1,12 +1,50 @@
-import { useDispatch, useSelector } from "react-redux"
 import { Navigate, createSearchParams, useNavigate } from "react-router-dom"
-import { loginPostAsync, logout } from "../slices/loginSlice"
+import { useRecoilState, useResetRecoilState } from "recoil"
+import signinState from "../atoms/signinState"
+import { loginPost } from "../api/memberApi"
+import { removeCookie, setCookie } from "../util/cookieUtil"
+import { cartState } from "../atoms/cartState";
+
 
 const useCustomLogin = () => {
 
     const navigate = useNavigate()
 
-    const dispatch = useDispatch()
+    const [loginState, setLoginState] = useRecoilState(signinState)
+
+    const resetState = useResetRecoilState(signinState)
+
+    const resetCartState = useResetRecoilState(cartState) //장바구니 비우기
+
+    const isLogin = loginState.email ? true : false //----------로그인 여부
+
+    const doLogin = async (loginParam) => { //----------로그인 함수
+
+        const result = await loginPost(loginParam)
+
+        console.log(result)
+
+        saveAsCookie(result)
+
+        return result
+    }
+
+    const saveAsCookie = (data) => {
+
+        setCookie("member", JSON.stringify(data), 1) //1일
+
+        setLoginState(data)
+    }
+
+
+    const doLogout = () => { //---------------로그아웃 함수
+
+        removeCookie('member')
+        resetState()
+        resetCartState()
+
+
+    }
 
     const exceptionHandle = (ex) => {
 
@@ -32,25 +70,6 @@ const useCustomLogin = () => {
         }
     }
 
-
-    const loginState = useSelector(state => state.loginSlice) //-------로그인 상태
-
-    const isLogin = loginState.email ? true : false //----------로그인 여부 
-
-
-    const doLogin = async (loginParam) => { //----------로그인 함수 
-
-        const action = await dispatch(loginPostAsync(loginParam))
-
-        return action.payload
-
-    }
-
-    const doLogout = () => { //---------------로그아웃 함수 
-
-        dispatch(logout())
-    }
-
     const moveToPath = (path) => {  //----------------페이지 이동 
         navigate({ pathname: path }, { replace: true })
     }
@@ -63,7 +82,7 @@ const useCustomLogin = () => {
         return <Navigate replace to="/member/login" />
     }
 
-    return { loginState, isLogin, doLogin, doLogout, moveToPath, moveToLogin, moveToLoginReturn, exceptionHandle }
+    return { loginState, isLogin, doLogin, doLogout, moveToPath, moveToLogin, moveToLoginReturn, exceptionHandle, saveAsCookie }
 
 }
 

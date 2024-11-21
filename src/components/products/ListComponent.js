@@ -6,51 +6,45 @@ import FetchingModal from "../common/FetchingModal";
 import { API_SERVER_HOST } from "../../api/todoApi";
 import PageComponent from "../common/PageComponent";
 import useCustomLogin from "../../hooks/useCustomLogin";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const host = API_SERVER_HOST
 
 
-const initState = {
-    dtoList: [],
-    pageNumList: [],
-    pageRequestDTO: null,
-    prev: false,
-    next: false,
-    totoalCount: 0,
-    prevPage: 0,
-    nextPage: 0,
-    totalPage: 0,
-    current: 0
-}
-
 const ListComponent = () => {
+
+    const queryClient = useQueryClient()
 
     const { page, size, refresh, moveToList, moveToRead } = useCustomMove()
 
-    const { exceptionHandle } = useCustomLogin()
+    const { exceptionHandle, moveToLoginReturn } = useCustomLogin()
 
-    //serverData는 나중에 사용
-    const [serverData, setServerData] = useState(initState)
+    const handleClickPage = (pageParam) => {
 
-    //for FetchingModal 
-    const [fetching, setFetching] = useState(false)
+        // if(pageParam.page === parseInt(page)){
+        //   queryClient.invalidateQueries("products/list")
+        // }
+        moveToList(pageParam)
+    }
 
-    useEffect(() => {
+    const { data, isFetching, error, isError } = useQuery({
+        queryKey: ['products/list', { page, size, refresh }],
+        queryFn: () => getList({ page, size }),
+        staleTime: 1000 * 60
+    })
 
-        setFetching(true)
+    if (isError) {
+        return moveToLoginReturn()
+    }
 
-        getList({ page, size }).then(data => {
-            console.log(data)
-            setServerData(data)
-            setFetching(false)
-        }).catch(err => exceptionHandle(err))
+    if (isFetching) {
+        return <FetchingModal />
+    }
 
-    }, [page, size, refresh])
+    const serverData = data
 
     return (
         <div className="border-2 border-blue-100 mt-10 mr-2 ml-2">
-
-            {fetching ? <FetchingModal /> : <></>}
 
             <div className="flex flex-wrap mx-auto p-6">
 
@@ -89,7 +83,7 @@ const ListComponent = () => {
                 )}
             </div>
 
-            <PageComponent serverData={serverData} movePage={moveToList}></PageComponent>
+            <PageComponent serverData={serverData} movePage={handleClickPage}></PageComponent>
 
         </div>
 
